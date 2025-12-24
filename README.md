@@ -15,6 +15,7 @@ The parsed data follows the QBReader taxonomy and includes detailed metadata abo
 
 - **Clean CLI interface** with beautiful rich output (progress bars, tables)
 - **Automatic caching** to avoid redundant API calls
+- **Model-specific caching** - Each model gets its own output directory
 - **Cost estimation** before running expensive OpenAI parsing
 - **Configurable** with environment variables
 - **Well-structured** codebase following DRY, YAGNI, and SOLID principles
@@ -40,7 +41,10 @@ uc-transcripts/
 ├── data/                     # Data directory (gitignored)
 │   ├── videos/               # Video metadata CSVs
 │   ├── transcripts/          # Raw transcript JSONs
-│   └── questions/            # Parsed question JSONs
+│   └── questions/            # Parsed questions (organized by model)
+│       ├── gpt-5.1/          # Questions parsed with gpt-5.1
+│       ├── gpt-4o/           # Questions parsed with gpt-4o
+│       └── gpt-4o-mini/      # Questions parsed with gpt-4o-mini
 └── pyproject.toml            # Project configuration
 ```
 
@@ -137,9 +141,15 @@ python bin/parse-questions.py --video-id 4IeES6Q0NNU
 ```
 
 **Output:**
-- JSON files: `data/questions/{video_id}.json`
+- JSON files: `data/questions/{model}/{video_id}.json`
+- Each model gets its own subdirectory (prevents mixing)
 - Progress bar during parsing
 - Summary of successes/skips/errors
+
+**Note:** Different models create separate caches:
+- `gpt-5.1` → `data/questions/gpt-5.1/`
+- `gpt-4o` → `data/questions/gpt-4o/`
+- This allows you to compare outputs from different models
 
 ## Data Format
 
@@ -166,7 +176,7 @@ python bin/parse-questions.py --video-id 4IeES6Q0NNU
 }
 ```
 
-### Parsed Questions JSON (`data/questions/{video_id}.json`)
+### Parsed Questions JSON (`data/questions/{model}/{video_id}.json`)
 
 ```json
 {
@@ -220,6 +230,30 @@ python bin/parse-questions.py --video-id 4IeES6Q0NNU
   ]
 }
 ```
+
+## Model-Specific Output Directories
+
+Each model automatically gets its own output directory to prevent mixing results:
+
+```bash
+# Parse with gpt-5.1
+python bin/parse-questions.py --model gpt-5.1
+# Output: data/questions/gpt-5.1/{video_id}.json
+
+# Parse with gpt-4o
+python bin/parse-questions.py --model gpt-4o
+# Output: data/questions/gpt-4o/{video_id}.json
+
+# Parse with gpt-4o-mini
+python bin/parse-questions.py --model gpt-4o-mini
+# Output: data/questions/gpt-4o-mini/{video_id}.json
+```
+
+**Benefits:**
+- ✅ No risk of mixing outputs from different models
+- ✅ Easy to compare results side-by-side
+- ✅ Each model has independent cache
+- ✅ Can re-parse with different model without `--force`
 
 ## Configuration
 

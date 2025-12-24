@@ -40,10 +40,9 @@ class Config:
         """Directory for raw transcript JSON files."""
         return self.data_dir / "transcripts"
 
-    @property
-    def questions_dir(self) -> Path:
+    def questions_dir(self, model: str) -> Path:
         """Directory for parsed question JSON files."""
-        return self.data_dir / "questions"
+        return self.data_dir / "questions" / model
 
     def validate(self) -> None:
         """
@@ -66,7 +65,7 @@ class Config:
         # Create data directories if they don't exist
         self.videos_dir.mkdir(parents=True, exist_ok=True)
         self.transcripts_dir.mkdir(parents=True, exist_ok=True)
-        self.questions_dir.mkdir(parents=True, exist_ok=True)
+        # Note: questions_dir is created on-demand per model
 
 
 # Global config singleton

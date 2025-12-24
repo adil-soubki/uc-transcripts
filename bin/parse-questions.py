@@ -83,6 +83,10 @@ Examples:
         console.print(f"[red]Error: {e}[/red]")
         return 1
 
+    # Show which model directory will be used
+    questions_output_dir = config.questions_dir(args.model)
+    console.print(f"[dim]Output directory: {questions_output_dir}[/dim]\n")
+
     # Get list of transcripts to process
     if args.video_id:
         transcript_files = [config.transcripts_dir / f"{args.video_id}.json"]
@@ -141,7 +145,7 @@ Examples:
 
         for transcript_path, data in valid_transcripts:
             video_id = transcript_path.stem
-            output_path = config.questions_dir / f"{video_id}.json"
+            output_path = config.questions_dir(args.model) / f"{video_id}.json"
 
             # Skip if cached
             if not args.force and output_path.exists():
