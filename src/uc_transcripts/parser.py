@@ -12,6 +12,8 @@ from uc_transcripts.prompts import build_uc_parse_prompt
 # Pricing per 1k tokens
 PRICING = {
     "gpt-5.1": {"input": 0.00125, "output": 0.01000},
+    "gpt-5-mini": {"input": 0.00025, "output": 0.002},
+    "gpt-5-nano": {"input": 0.00005, "output": 0.0004},
     "gpt-4o": {"input": 0.0025, "output": 0.01},
     "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
 }
@@ -106,7 +108,7 @@ def count_tokens(text: str, model: str) -> int:
 def estimate_parsing_cost(
     transcripts: list[dict],
     model: str = "gpt-5.1",
-    avg_output_tokens: int = 1500,
+    avg_output_tokens: int = 9000,
 ) -> dict:
     """
     Estimate total cost of parsing all transcripts.
@@ -133,7 +135,14 @@ def estimate_parsing_cost(
         prompt = build_uc_parse_prompt(transcript, video_metadata)
         total_input_tokens += count_tokens(prompt, model)
 
-    pricing = PRICING.get(model, PRICING["gpt-5.1"])
+    try:
+        pricing = PRICING[model]
+    except KeyError as err:
+        err.add_note(
+            f"No pricing information entered for {model} in {__file__}. "
+            f"See https://platform.openai.com/docs/pricing for details."
+        )
+        raise
     input_cost = (total_input_tokens / 1000) * pricing["input"]
     output_cost = (total_output_tokens / 1000) * pricing["output"]
 
