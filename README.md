@@ -111,7 +111,7 @@ uv run --env-file .env python bin/fetch-transcripts.py --channel @CosmicPumpkin 
 # Estimate cost first (recommended!)
 uv run --env-file .env python bin/parse-questions.py --estimate
 
-# Parse all transcripts with default model (gpt-4o-mini)
+# Parse all transcripts with default model (gpt-5.1)
 uv run --env-file .env python bin/parse-questions.py
 
 # Use a different model
@@ -229,13 +229,13 @@ Example output:
 ╭─────────────────── Cost Estimation ────────────────────╮
 │ Metric             │ Value                             │
 ├────────────────────┼───────────────────────────────────┤
-│ Model              │ gpt-4o-mini                       │
+│ Model              │ gpt-5.1                           │
 │ Transcripts        │ 242                               │
 │ Input Tokens       │ 1,385,665                         │
 │ Output Tokens      │ 363,000                           │
-│ Input Cost         │ $0.2079                           │
-│ Output Cost        │ $0.2178                           │
-│ Total Cost         │ $0.4257                           │
+│ Input Cost         │ $1.7321                           │
+│ Output Cost        │ $3.6300                           │
+│ Total Cost         │ $5.3621                           │
 ╰────────────────────┴───────────────────────────────────╯
 ```
 
@@ -268,7 +268,7 @@ parsed = parse_transcript(
     video_id=videos[0].video_id,
     transcript=transcript,
     video_metadata=videos[0],
-    model="gpt-4o-mini",
+    model="gpt-5.1",
 )
 ```
 
