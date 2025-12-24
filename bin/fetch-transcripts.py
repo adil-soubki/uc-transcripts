@@ -5,6 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from youtube_transcript_api import TranscriptsDisabled
@@ -17,6 +18,8 @@ from uc_transcripts import (
     save_json,
 )
 
+# Load environment variables from .env file
+load_dotenv()
 
 console = Console()
 

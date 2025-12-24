@@ -77,13 +77,28 @@ uc-transcripts/
 
 ## Usage
 
-All commands should be run with `uv run` to use the environment variables from `.env`:
+The scripts automatically load environment variables from `.env` using python-dotenv. You can run them in two ways:
+
+**Option 1: Activate venv and run directly (simpler)**
+```bash
+source .venv/bin/activate
+python bin/fetch-videos.py --channel @CosmicPumpkin
+```
+
+**Option 2: Use uv run (no activation needed)**
+```bash
+# Automatically uses .env
+uv run python bin/fetch-videos.py --channel @CosmicPumpkin
+
+# Or explicitly specify env file (useful for multiple env files)
+uv run --env-file .env python bin/fetch-videos.py --channel @CosmicPumpkin
+```
 
 ### 1. Fetch Video Metadata
 
 ```bash
 # Fetch all videos from a channel
-uv run --env-file .env python bin/fetch-videos.py --channel @CosmicPumpkin
+python bin/fetch-videos.py --channel @CosmicPumpkin
 ```
 
 **Output:**
@@ -94,10 +109,10 @@ uv run --env-file .env python bin/fetch-videos.py --channel @CosmicPumpkin
 
 ```bash
 # Download transcripts for all videos (uses cache)
-uv run --env-file .env python bin/fetch-transcripts.py --channel @CosmicPumpkin
+python bin/fetch-transcripts.py --channel @CosmicPumpkin
 
 # Force re-fetch all transcripts
-uv run --env-file .env python bin/fetch-transcripts.py --channel @CosmicPumpkin --force
+python bin/fetch-transcripts.py --channel @CosmicPumpkin --force
 ```
 
 **Output:**
@@ -109,16 +124,16 @@ uv run --env-file .env python bin/fetch-transcripts.py --channel @CosmicPumpkin 
 
 ```bash
 # Estimate cost first (recommended!)
-uv run --env-file .env python bin/parse-questions.py --estimate
+python bin/parse-questions.py --estimate
 
 # Parse all transcripts with default model (gpt-5.1)
-uv run --env-file .env python bin/parse-questions.py
+python bin/parse-questions.py
 
 # Use a different model
-uv run --env-file .env python bin/parse-questions.py --model gpt-4o
+python bin/parse-questions.py --model gpt-4o
 
 # Parse a specific video
-uv run --env-file .env python bin/parse-questions.py --video-id 4IeES6Q0NNU
+python bin/parse-questions.py --video-id 4IeES6Q0NNU
 ```
 
 **Output:**

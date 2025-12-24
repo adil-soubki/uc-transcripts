@@ -5,6 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.table import Table
@@ -20,6 +21,8 @@ from uc_transcripts import (
     Transcript,
 )
 
+# Load environment variables from .env file
+load_dotenv()
 
 console = Console()
 

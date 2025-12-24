@@ -6,11 +6,14 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
 from uc_transcripts import Config, set_config, get_videos_from_channel
 
+# Load environment variables from .env file
+load_dotenv()
 
 console = Console()
 
