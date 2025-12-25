@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.0.0",
     "tiktoken>=0.5.0",
     "python-dotenv>=1.2.1",
+    "scikit-learn>=1.7.2",
 ]
 authors = [
     {name = "Adil"}
@@ -37,5 +38,7 @@ select = ["E", "F", "I"]
 [dependency-groups]
 dev = [
     "ipdb>=0.13.13",
+    "ipykernel>=7.1.0",
     "ipython>=8.37.0",
+    "matplotlib>=3.10.8",
 ]
