@@ -1,5 +1,6 @@
 """OpenAI parsing service for transcript analysis."""
 
+import asyncio
 import json
 import openai
 import tiktoken
@@ -38,7 +39,9 @@ def parse_transcript(
     temperature: float = 0.0,
 ) -> dict:
     """
-    Parse transcript into structured questions using OpenAI.
+    Parse transcript into structured questions using OpenAI (synchronous wrapper).
+
+    This is a convenience wrapper around parse_transcript_async for synchronous code.
 
     Args:
         video_id: YouTube video ID
@@ -53,30 +56,77 @@ def parse_transcript(
     Raises:
         RuntimeError: If JSON parsing fails
     """
-    client = get_openai_client()
-    prompt = build_uc_parse_prompt(transcript, video_metadata)
-
-    try:
-        response = client.chat.completions.create(
+    return asyncio.run(
+        parse_transcript_async(
+            video_id=video_id,
+            transcript=transcript,
+            video_metadata=video_metadata,
             model=model,
-            messages=[
-                {"role": "system", "content": "You are a careful data extraction system."},
-                {"role": "user", "content": prompt}
-            ],
             temperature=temperature,
         )
-    except openai.BadRequestError as e:
-        # Handle model that doesn't support temperature parameter
-        if "temperature" in str(e):
-            response = client.chat.completions.create(
+    )
+
+
+async def parse_transcript_async(
+    video_id: str,
+    transcript: Transcript,
+    video_metadata: VideoMetadata,
+    model: str = "gpt-5.1",
+    temperature: float = 0.0,
+    max_retries: int = 3,
+) -> dict:
+    """
+    Parse transcript into structured questions using OpenAI (async version).
+
+    Args:
+        video_id: YouTube video ID
+        transcript: Transcript object
+        video_metadata: Video metadata (title, date, etc.)
+        model: OpenAI model to use
+        temperature: Sampling temperature (0.0 for deterministic)
+        max_retries: Maximum number of retries for rate limit errors
+
+    Returns:
+        Parsed episode data as dict
+
+    Raises:
+        RuntimeError: If JSON parsing fails
+    """
+    config = get_config()
+    client = openai.AsyncOpenAI(api_key=config.openai_api_key)
+    prompt = build_uc_parse_prompt(transcript, video_metadata)
+
+    for attempt in range(max_retries):
+        try:
+            response = await client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a careful data extraction system."},
                     {"role": "user", "content": prompt}
                 ],
+                temperature=temperature,
             )
-        else:
-            raise
+            break
+        except openai.RateLimitError as e:
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                await asyncio.sleep(wait_time)
+                continue
+            else:
+                raise
+        except openai.BadRequestError as e:
+            # Handle model that doesn't support temperature parameter
+            if "temperature" in str(e):
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a careful data extraction system."},
+                        {"role": "user", "content": prompt}
+                    ],
+                )
+                break
+            else:
+                raise
 
     raw_json = response.choices[0].message.content
 

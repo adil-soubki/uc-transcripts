@@ -2,6 +2,7 @@
 """Parse transcripts into structured questions using OpenAI."""
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
@@ -15,7 +16,7 @@ from uc_transcripts import (
     set_config,
     load_json,
     save_json,
-    parse_transcript,
+    parse_transcript_async,
     estimate_parsing_cost,
     VideoMetadata,
     Transcript,
@@ -70,6 +71,12 @@ Examples:
         type=Path,
         default=Path("data"),
         help="Data directory (default: data/)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=5,
+        help="Number of concurrent workers (default: 5)",
     )
 
     args = parser.parse_args()
@@ -127,34 +134,23 @@ Examples:
         console.print(table)
         return 0
 
-    # Parse transcripts
-    success_count = 0
-    skip_count = 0
-    error_count = 0
+    # Parse transcripts with async/concurrent processing
+    async def parse_one(semaphore, transcript_path, data, progress_obj, task_id):
+        """Parse a single transcript with concurrency control."""
+        nonlocal success_count, skip_count, error_count
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        console=console,
-    ) as progress:
-        task = progress.add_task(
-            "[cyan]Parsing transcripts...", total=len(valid_transcripts)
-        )
+        video_id = transcript_path.stem
+        output_path = config.questions_dir(args.model) / f"{video_id}.json"
 
-        for transcript_path, data in valid_transcripts:
-            video_id = transcript_path.stem
-            output_path = config.questions_dir(args.model) / f"{video_id}.json"
+        # Skip if cached
+        if not args.force and output_path.exists():
+            progress_obj.console.print(f"[dim]✓ Cached: {data['title'][:60]}[/dim]")
+            skip_count += 1
+            progress_obj.advance(task_id)
+            return
 
-            # Skip if cached
-            if not args.force and output_path.exists():
-                progress.console.print(f"[dim]✓ Cached: {data['title'][:60]}[/dim]")
-                skip_count += 1
-                progress.advance(task)
-                continue
-
-            # Parse
+        # Parse with semaphore to limit concurrency
+        async with semaphore:
             try:
                 video_metadata = VideoMetadata(**{
                     k: data[k]
@@ -169,20 +165,52 @@ Examples:
                 })
                 transcript = Transcript.from_dict(data["transcript"])
 
-                parsed = parse_transcript(
+                parsed = await parse_transcript_async(
                     video_id=video_id,
                     transcript=transcript,
                     video_metadata=video_metadata,
                     model=args.model,
                 )
                 save_json(output_path, parsed)
-                progress.console.print(f"[green]✓ Parsed: {data['title'][:60]}[/green]")
+                progress_obj.console.print(f"[green]✓ Parsed: {data['title'][:60]}[/green]")
                 success_count += 1
             except Exception as e:
-                progress.console.print(f"[red]✗ Error ({video_id}): {e}[/red]")
+                progress_obj.console.print(f"[red]✗ Error ({video_id}): {e}[/red]")
                 error_count += 1
 
-            progress.advance(task)
+            progress_obj.advance(task_id)
+
+    async def run_parsing():
+        """Run all parsing tasks concurrently."""
+        semaphore = asyncio.Semaphore(args.workers)
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console,
+        ) as progress:
+            task = progress.add_task(
+                f"[cyan]Parsing transcripts ({args.workers} workers)...",
+                total=len(valid_transcripts)
+            )
+
+            # Create all tasks
+            tasks = [
+                parse_one(semaphore, transcript_path, data, progress, task)
+                for transcript_path, data in valid_transcripts
+            ]
+
+            # Run all tasks concurrently
+            await asyncio.gather(*tasks)
+
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+
+    # Run the async parsing
+    asyncio.run(run_parsing())
 
     # Summary
     console.print(f"\n[bold]Summary:[/bold]")

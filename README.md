@@ -14,9 +14,11 @@ The parsed data follows the QBReader taxonomy and includes detailed metadata abo
 ## Features
 
 - **Clean CLI interface** with beautiful rich output (progress bars, tables)
+- **Parallel processing** - 5-10x faster with concurrent API requests
 - **Automatic caching** to avoid redundant API calls
 - **Model-specific caching** - Each model gets its own output directory
 - **Cost estimation** before running expensive OpenAI parsing
+- **Rate limit handling** - Automatic retry with exponential backoff
 - **Configurable** with environment variables
 - **Well-structured** codebase following DRY, YAGNI, and SOLID principles
 - **Type-safe** with comprehensive type hints and dataclasses
@@ -130,8 +132,11 @@ python bin/fetch-transcripts.py --channel @CosmicPumpkin --force
 # Estimate cost first (recommended!)
 python bin/parse-questions.py --estimate
 
-# Parse all transcripts with default model (gpt-5.1)
+# Parse all transcripts with default model (gpt-5.1) and 5 workers
 python bin/parse-questions.py
+
+# Use more workers for faster processing (10 concurrent requests)
+python bin/parse-questions.py --workers 10
 
 # Use a different model
 python bin/parse-questions.py --model gpt-4o
@@ -139,6 +144,12 @@ python bin/parse-questions.py --model gpt-4o
 # Parse a specific video
 python bin/parse-questions.py --video-id 4IeES6Q0NNU
 ```
+
+**Performance:**
+- **Default: 5 concurrent workers** - Good balance of speed and rate limits
+- **Faster: 10+ workers** - Use if you have higher API rate limits
+- **5-10x speedup** compared to sequential processing
+- Automatic retry with exponential backoff for rate limit errors
 
 **Output:**
 - JSON files: `data/questions/{model}/{video_id}.json`

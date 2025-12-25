@@ -15,7 +15,12 @@ from uc_transcripts.models import (
 )
 from uc_transcripts.youtube import get_videos_from_channel
 from uc_transcripts.transcripts import fetch_transcript
-from uc_transcripts.parser import parse_transcript, estimate_parsing_cost, count_tokens
+from uc_transcripts.parser import (
+    parse_transcript,
+    parse_transcript_async,
+    estimate_parsing_cost,
+    count_tokens,
+)
 from uc_transcripts.cache import load_json, save_json, with_cache
 from uc_transcripts.utils import zip_directory, unzip_file
 
@@ -41,6 +46,7 @@ __all__ = [
     "fetch_transcript",
     # Parser
     "parse_transcript",
+    "parse_transcript_async",
     "estimate_parsing_cost",
     "count_tokens",
     # Cache
