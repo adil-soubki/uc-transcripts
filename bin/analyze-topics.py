@@ -15,11 +15,14 @@ from pathlib import Path
 from collections import Counter, defaultdict
 from typing import List, Dict, Any
 import argparse
+import os
 
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import LatentDirichletAllocation, NMF
 import numpy as np
+from openai import OpenAI
+from dotenv import load_dotenv
 
 
 def load_all_questions(data_path: str) -> List[Dict[str, Any]]:
@@ -77,11 +80,40 @@ def extract_answers(questions: List[Dict[str, Any]]) -> List[str]:
     return answers
 
 
-def perform_topic_modeling(texts: List[str], n_topics: int = 10, method: str = "lda"):
+def name_topic_with_llm(top_terms: List[str], model: str = "gpt-5-nano") -> str:
+    """Use an LLM to generate a short descriptive name for a topic based on its top terms."""
+    try:
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        prompt = f"""Given these top terms from a topic model of University Challenge quiz questions, generate a short (2-4 word) descriptive name for this topic.
+
+Top terms: {', '.join(top_terms)}
+
+Respond with ONLY the topic name, nothing else."""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        # Print error for debugging
+        print(f"  [Warning: LLM naming failed: {e}]")
+        # Fallback to simple name if LLM fails
+        return f"Topic about {top_terms[0]}"
+
+
+def perform_topic_modeling(texts: List[str], n_topics: int = 10, method: str = "lda",
+                          naming_model: str = None):
     """Perform topic modeling on question texts."""
     print(f"\n{'='*80}")
     print(f"TOPIC MODELING ({method.upper()}, {n_topics} topics)")
     print(f"{'='*80}\n")
+
+    # Load environment variables if using auto-naming
+    if naming_model:
+        load_dotenv()
 
     # Use TF-IDF vectorization
     vectorizer = TfidfVectorizer(
@@ -112,12 +144,25 @@ def perform_topic_modeling(texts: List[str], n_topics: int = 10, method: str = "
     model.fit(doc_term_matrix)
 
     # Display topics
-    print(f"Top {n_topics} topics with their most relevant terms:\n")
+    print(f"Discovered {n_topics} topics:")
+
+    if naming_model:
+        print(f"  Generating topic names with {naming_model}...")
+    print()
+
+    n_terms = 10
     for topic_idx, topic in enumerate(model.components_):
-        top_indices = topic.argsort()[-15:][::-1]
+        top_indices = topic.argsort()[-n_terms:][::-1]
         top_terms = [feature_names[i] for i in top_indices]
-        print(f"Topic {topic_idx + 1}:")
-        print(f"  {', '.join(top_terms)}\n")
+
+        # Generate topic name
+        if naming_model:
+            topic_name = name_topic_with_llm(top_terms, model=naming_model)
+            print(f"Topic {topic_idx + 1}: {topic_name}")
+        else:
+            print(f"Topic {topic_idx + 1}:")
+
+        print(f"  Top terms: {', '.join(top_terms[:n_terms])}\n")
 
 
 def analyze_categories(questions: List[Dict[str, Any]]):
@@ -277,6 +322,11 @@ def main():
         action="store_true",
         help="Skip topic modeling (only show basic analytics)"
     )
+    parser.add_argument(
+        "--naming-model",
+        default=None,
+        help="Model to use for automatic topic naming (e.g., gpt-5-nano). If not specified, topics won't be auto-named."
+    )
 
     args = parser.parse_args()
 
@@ -299,9 +349,14 @@ def main():
         print(f"\nExtracted {len(texts)} question texts for topic modeling")
 
         if texts:
-            perform_topic_modeling(texts, n_topics=args.n_topics, method=args.method)
+            perform_topic_modeling(
+                texts,
+                n_topics=args.n_topics,
+                method=args.method,
+                naming_model=args.naming_model
+            )
 
-    print(f"\n{'='*80}")
+    print(f"{'='*80}")
     print("Analysis complete!")
     print(f"{'='*80}\n")
 
